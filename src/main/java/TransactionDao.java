@@ -1,7 +1,9 @@
 import java.sql.*;
+import java.util.LinkedList;
+import java.util.List;
 
 public class TransactionDao {
-    private static final String URL = "jdbc:mysql://localhost:3306/home_budget";
+    private static final String URL = "jdbc:mysql://localhost:3306/home_budget?serverTimezone=UTC";
     private static final String USER = "root";
     private static final String PASS = "root";
     private Connection connection;
@@ -11,9 +13,9 @@ public class TransactionDao {
             Class.forName("com.mysql.cj.jdbc.Driver");
             connection = DriverManager.getConnection(URL, USER, PASS);
         } catch (ClassNotFoundException e) {
-            System.out.println("No driver found");
+            System.out.println(e.getMessage());
         } catch (SQLException e) {
-            System.out.println("Could not establish connection");
+            System.out.println(e.getMessage());
         }
     }
 
@@ -29,17 +31,13 @@ public class TransactionDao {
         final String sql = "insert into transaction (type , description, amount, date ) values(?, ?, ?, ?)";
         try {
             PreparedStatement prepStmt = connection.prepareStatement(sql);
-            prepStmt.setBoolean(1, transaction.isType());
-            System.out.println(transaction.isType());
+            prepStmt.setString(1, transaction.getType());
             prepStmt.setString(2, transaction.getDescription());
-            System.out.println(transaction.getDescription());
             prepStmt.setDouble(3, transaction.getAmount());
-            System.out.println(transaction.getAmount());
             prepStmt.setDate(4, transaction.getDate());
-            System.out.println(transaction.getDate());
             prepStmt.executeUpdate();
         } catch (SQLException e) {
-            System.out.println("Could not save record");
+            System.out.println(e.getMessage());
             e.printStackTrace();
         }
     }
@@ -53,25 +51,50 @@ public class TransactionDao {
             if (result.next()) {
                 Transaction transaction = new Transaction();
                 transaction.setId(result.getLong("id"));
+                transaction.setType(result.getString("type"));
                 transaction.setDescription(result.getString("description"));
                 transaction.setAmount(result.getDouble("amount"));
                 transaction.setDate(result.getDate("date"));
                 return transaction;
             }
         } catch (SQLException e) {
-            System.out.println("Could not get employee");
+            System.out.println(e.getMessage());
+        }
+        return null;
+    }
+
+    public List<Transaction> readType(String type) {
+        final String sql = "select id, type , description, amount, date from transaction where type = ?";
+        List<Transaction> types = new LinkedList<>();
+        try {
+            PreparedStatement prepStmt = connection.prepareStatement(sql);
+            prepStmt.setString(1, type);
+            ResultSet result = prepStmt.executeQuery();
+            while (result.next()) {
+                Transaction transaction = new Transaction();
+                transaction.setId(result.getLong("id"));
+                transaction.setType(result.getString("type"));
+                transaction.setDescription(result.getString("description"));
+                transaction.setAmount(result.getDouble("amount"));
+                transaction.setDate(result.getDate("date"));
+                types.add(transaction);
+            }
+            return types;
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
         }
         return null;
     }
 
     public void update(Transaction transaction) {
-        final String sql = "update employees set firstName=?, lastName=?, salary=? where id = ?";
+        final String sql = "update transaction set type =?, description=?, amount=?, date=? where id = ?";
         try {
             PreparedStatement prepStmt = connection.prepareStatement(sql);
-            prepStmt.setBoolean(1, transaction.isType());
+            prepStmt.setString(1, transaction.getType());
             prepStmt.setString(2, transaction.getDescription());
             prepStmt.setDouble(3, transaction.getAmount());
             prepStmt.setDate(4, transaction.getDate());
+            prepStmt.setLong(5, transaction.getId());
             prepStmt.executeUpdate();
         } catch (SQLException e) {
             System.out.println("Could not update record");
@@ -86,7 +109,7 @@ public class TransactionDao {
             prepStmt.setLong(1, id);
             prepStmt.executeUpdate();
         } catch (SQLException e) {
-            System.out.println("Could not delete row");
+            System.out.println(e.getMessage());
         }
     }
 }
